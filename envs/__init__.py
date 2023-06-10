@@ -1,2 +1,2 @@
-from gym_mat.envs.env_mat import *
-from gym_mat.envs.pytris import Tetris
+from .env_mat import *
+from .pytris import Tetris
