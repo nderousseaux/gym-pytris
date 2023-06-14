@@ -5,6 +5,7 @@ import operator
 from random import *
 from pygame.locals import *
 import numpy as np
+import os
 
 RIGHT = 0
 LEFT = 1
@@ -13,6 +14,9 @@ ROTATE_LEFT = 3
 TELEPORT = 4
 HOLD = 5
 SPEED_DOWN = 6
+
+# Path dynamic
+PATH_ASSETS = os.path.dirname(__file__) + "/"
 
 class tetrimino:
 ########################################### I
@@ -210,9 +214,9 @@ class tetrimino:
 class variables_ui:
     def __init__(self):
         # Fonts
-        font_path = "./envs/assets/fonts/OpenSans-Light.ttf"
-        font_path_b = "./envs/assets/fonts/OpenSans-Bold.ttf"
-        font_path_i = "./envs/assets/fonts/Inconsolata/Inconsolata.otf"
+        font_path = PATH_ASSETS + "assets/fonts/OpenSans-Light.ttf"
+        font_path_b = PATH_ASSETS + "assets/fonts/OpenSans-Bold.ttf"
+        font_path_i = PATH_ASSETS + "assets/fonts/Inconsolata/Inconsolata.otf"
 
         self.h1 = pygame.font.Font(font_path, 50)
         self.h2 = pygame.font.Font(font_path, 30)
@@ -227,13 +231,13 @@ class variables_ui:
         self.h5_i = pygame.font.Font(font_path_i, 13)
 
         # Sounds
-        self.click_sound = pygame.mixer.Sound("./envs/assets/sounds/SFX_ButtonUp.wav")
-        self.move_sound = pygame.mixer.Sound("./envs/assets/sounds/SFX_PieceMoveLR.wav")
-        self.drop_sound = pygame.mixer.Sound("./envs/assets/sounds/SFX_PieceHardDrop.wav")
-        self.single_sound = pygame.mixer.Sound("./envs/assets/sounds/SFX_SpecialLineClearSingle.wav")
-        self.double_sound = pygame.mixer.Sound("./envs/assets/sounds/SFX_SpecialLineClearDouble.wav")
-        self.triple_sound = pygame.mixer.Sound("./envs/assets/sounds/SFX_SpecialLineClearTriple.wav")
-        self.tetris_sound = pygame.mixer.Sound("./envs/assets/sounds/SFX_SpecialTetris.wav")
+        self.click_sound = pygame.mixer.Sound(PATH_ASSETS + "assets/sounds/SFX_ButtonUp.wav")
+        self.move_sound = pygame.mixer.Sound(PATH_ASSETS + "assets/sounds/SFX_PieceMoveLR.wav")
+        self.drop_sound = pygame.mixer.Sound(PATH_ASSETS + "assets/sounds/SFX_PieceHardDrop.wav")
+        self.single_sound = pygame.mixer.Sound(PATH_ASSETS + "assets/sounds/SFX_SpecialLineClearSingle.wav")
+        self.double_sound = pygame.mixer.Sound(PATH_ASSETS + "assets/sounds/SFX_SpecialLineClearDouble.wav")
+        self.triple_sound = pygame.mixer.Sound(PATH_ASSETS + "assets/sounds/SFX_SpecialLineClearTriple.wav")
+        self.tetris_sound = pygame.mixer.Sound(PATH_ASSETS + "assets/sounds/SFX_SpecialTetris.wav")
 
 
         # Background colors
@@ -257,7 +261,8 @@ class variables_ui:
 
 class Tetris():
 
-    def __init__(self):
+    def __init__(self, bot=False):
+        self.bot = bot
         # Define
         self.block_size = 17 # Height, width of single block
         self.width = 10 # Board width
@@ -268,7 +273,7 @@ class Tetris():
 
         self.clock = pygame.time.Clock()
         self.screen = pygame.display.set_mode((300, 374))
-        pygame.time.set_timer(pygame.USEREVENT, self.framerate * 10)
+        self.wait(self.framerate * 10)
         pygame.display.set_caption("PYTRIS™")
 
         self.ui_variables = variables_ui()
@@ -298,9 +303,9 @@ class Tetris():
         self.name_location = 0
         self.name = [65, 65, 65]
 
-        with open('./envs/leaderboard.txt') as f:
+        with open(PATH_ASSETS + 'leaderboard.txt') as f:
             lines = f.readlines()
-        lines = [line.rstrip('\n') for line in open('./envs/leaderboard.txt')]
+        lines = [line.rstrip('\n') for line in open(PATH_ASSETS + 'leaderboard.txt')]
 
         self.leaders = {'AAA': 0, 'BBB': 0, 'CCC': 0}
         for i in lines:
@@ -316,6 +321,7 @@ class Tetris():
     def run(self):
         while not self.done:
             self.view()
+            
 
         pygame.quit()
    
@@ -533,7 +539,7 @@ class Tetris():
         while not self.is_bottom(self.dx, self.dy, self.mino, self.rotation):
             self.dy += 1
         self.hardrop = True
-        pygame.time.set_timer(pygame.USEREVENT, 1)
+        self.wait(1)
         self.draw_mino(self.dx, self.dy, self.mino, self.rotation)
         self.draw_board(self.next_mino, self.hold_mino, self.score, self.level, self.goal)
 
@@ -634,7 +640,7 @@ class Tetris():
             self.draw_board(self.next_mino, self.hold_mino, self.score, self.level, self.goal)
 
     def speed_down(self):
-        pygame.time.set_timer(pygame.USEREVENT, self.framerate * 1)
+        self.wait(self.framerate * 1)
 
     def action(self, action):
         if action == RIGHT: #Droite
@@ -671,10 +677,9 @@ class Tetris():
         # Holding piece
 
         matrix = self.matrix
+
         # Chaque élément de la matrice est entre différent de 0 est 1
         matrix = [[1 if x > 0 else 0 for x in y] for y in matrix]
-        
-        # On ajoute sur la matrice la piece courante
         
         # On récupère la matrice de la pièce courante
         mino_matrix = tetrimino().mino_map[self.mino-1][self.rotation]
@@ -699,182 +704,71 @@ class Tetris():
         # On crée le np concaténé général
         return np.array(matrix + [self.level] + [next_mino] + [hold_mino])
 
-    def view(self):
-        # Pause screen
-        if self.pause:
-            for event in pygame.event.get():
-                if event.type == QUIT:
-                    self.done = True
-                elif event.type == USEREVENT:
-                    pygame.time.set_timer(pygame.USEREVENT, 300)
-                    self.draw_board(self.next_mino, self.hold_mino, self.score, self.level, self.goal)
+    def view_pause(self):
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                self.done = True
+            elif event.type == USEREVENT:
+                self.wait(300)
+                self.draw_board(self.next_mino, self.hold_mino, self.score, self.level, self.goal)
 
-                    pause_text = self.ui_variables.h2_b.render("PAUSED", 1, self.ui_variables.white)
-                    pause_start = self.ui_variables.h5.render("Press esc to continue", 1, self.ui_variables.white)
+                pause_text = self.ui_variables.h2_b.render("PAUSED", 1, self.ui_variables.white)
+                pause_start = self.ui_variables.h5.render("Press esc to continue", 1, self.ui_variables.white)
 
-                    self.screen.blit(pause_text, (43, 100))
-                    if self.blink:
-                        self.screen.blit(pause_start, (40, 160))
-                        self.blink = False
-                    else:
-                        self.blink = True
-                    pygame.display.update()
-                elif event.type == KEYDOWN:
-                    self.erase_mino(self.dx, self.dy, self.mino, self.rotation)
-                    if event.key == K_ESCAPE:
-                        self.pause = False
-                        self.ui_variables.click_sound.play()
-                        pygame.time.set_timer(pygame.USEREVENT, 1)
+                self.screen.blit(pause_text, (43, 100))
+                if self.blink:
+                    self.screen.blit(pause_start, (40, 160))
+                    self.blink = False
+                else:
+                    self.blink = True
+                pygame.display.update()
+            elif event.type == KEYDOWN:
+                self.erase_mino(self.dx, self.dy, self.mino, self.rotation)
+                if event.key == K_ESCAPE:
+                    self.pause = False
+                    self.ui_variables.click_sound.play()
+                    self.wait(1)
 
-        # Game screen
-        elif self.start:
-            for event in pygame.event.get():
-                if event.type == QUIT:
-                    self.done = True
-                elif event.type == USEREVENT:
-                    # Set speed
-                    if not self.game_over:
-                        keys_pressed = pygame.key.get_pressed()
-                        if keys_pressed[K_DOWN]:
-                            self.speed_down()
-                        else:
-                            pygame.time.set_timer(pygame.USEREVENT, self.framerate * 10)
+    def view_gameover(self):
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                self.done = True
+            elif event.type == USEREVENT:
+                self.wait(300)
+                over_text_1 = self.ui_variables.h2_b.render("GAME", 1, self.ui_variables.white)
+                over_text_2 = self.ui_variables.h2_b.render("OVER", 1, self.ui_variables.white)
+                over_start = self.ui_variables.h5.render("Press return to continue", 1, self.ui_variables.white)
 
-                    # Draw a mino
-                    self.draw_mino(self.dx, self.dy, self.mino, self.rotation)
-                    self.draw_board(self.next_mino, self.hold_mino, self.score, self.level, self.goal)
+                self.draw_board(self.next_mino, self.hold_mino, self.score, self.level, self.goal)
+                self.screen.blit(over_text_1, (58, 75))
+                self.screen.blit(over_text_2, (62, 105))
 
-                    # Erase a mino
-                    if not self.game_over:
-                        self.erase_mino(self.dx, self.dy, self.mino, self.rotation)
+                self.name_1 = self.ui_variables.h2_i.render(chr(self.name[0]), 1, self.ui_variables.white)
+                self.name_2 = self.ui_variables.h2_i.render(chr(self.name[1]), 1, self.ui_variables.white)
+                self.name_3 = self.ui_variables.h2_i.render(chr(self.name[2]), 1, self.ui_variables.white)
 
-                    # Move mino down
-                    if not self.is_bottom(self.dx, self.dy, self.mino, self.rotation):
-                        self.dy += 1
+                underbar_1 = self.ui_variables.h2.render("_", 1, self.ui_variables.white)
+                underbar_2 = self.ui_variables.h2.render("_", 1, self.ui_variables.white)
+                underbar_3 = self.ui_variables.h2.render("_", 1, self.ui_variables.white)
 
-                    # Create new mino
-                    else:
-                        if self.hardrop or self.bottom_count == 6:
-                            self.hardrop = False
-                            self.bottom_count = 0
-                            self.score += 10 * self.level
-                            self.draw_mino(self.dx, self.dy,self.mino, self.rotation)
-                            self.draw_board(self.next_mino, self.hold_mino, self.score, self.level, self.goal)
-                            if self.is_stackable(self.next_mino):
-                                self.mino = self.next_mino
-                                self.next_mino = randint(1, 7)
-                                self.dx, self.dy = 3, 0
-                                self.rotation = 0
-                                self.hold = False
-                            else:
-                                self.start = False
-                                self.game_over = True
-                                pygame.time.set_timer(pygame.USEREVENT, 1)
-                        else:
-                            self.bottom_count += 1
+                self.screen.blit(self.name_1, (65, 147))
+                self.screen.blit(self.name_2, (95, 147))
+                self.screen.blit(self.name_3, (125, 147))
 
-                    # Erase line
-                    erase_count = 0
-                    for j in range(21):
-                        is_full = True
-                        for i in range(10):
-                            if self.matrix[i][j] == 0:
-                                is_full = False
-                        if is_full:
-                            erase_count += 1
-                            k = j
-                            while k > 0:
-                                for i in range(10):
-                                    self.matrix[i][k] = self.matrix[i][k - 1]
-                                k -= 1
-                    if erase_count == 1:
-                        self.ui_variables.single_sound.play()
-                        self.score += 50 * self.level
-                    elif erase_count == 2:
-                        self.ui_variables.double_sound.play()
-                        self.score += 150 * self.level
-                    elif erase_count == 3:
-                        self.ui_variables.triple_sound.play()
-                        self.score += 350 * self.level
-                    elif erase_count == 4:
-                        self.ui_variables.tetris_sound.play()
-                        self.score += 1000 * self.level
+                if self.blink:
+                    self.screen.blit(over_start, (32, 195))
+                    self.blink = False
+                else:
+                    if self.name_location == 0:
+                        self.screen.blit(underbar_1, (65, 145))
+                    elif self.name_location == 1:
+                        self.screen.blit(underbar_2, (95, 145))
+                    elif self.name_location == 2:
+                        self.screen.blit(underbar_3, (125, 145))
+                    self.blink = True
 
-                    # Increase self.level
-                    self.goal -= erase_count
-                    if self.goal < 1 and self.level < 15:
-                        self.level += 1
-                        self.goal += self.level * 5
-                        self.framerate = int(self.framerate * 0.8)
-
-                elif event.type == KEYDOWN:
-                    self.erase_mino(self.dx, self.dy, self.mino, self.rotation)
-                    if event.key == K_ESCAPE:
-                        self.ui_variables.click_sound.play()
-                        self.pause = True
-                    # Hard drop
-                    elif event.key == K_SPACE:
-                        self.teleport()
-                    # Hold
-                    elif event.key == K_LSHIFT or event.key == K_c:
-                        self.hold_press()
-                        
-                    # Turn right
-                    elif event.key == K_UP or event.key == K_x:
-                        self.turn_right()
-                    # Turn left
-                    elif event.key == K_z or event.key == K_LCTRL:
-                        self.turn_left()
-                    # Move left
-                    elif event.key == K_LEFT:
-                        self.move_left()
-                    # Move right
-                    elif event.key == K_RIGHT:
-                        self.move_right()
-
-            pygame.display.update()
-
-        # Game over screen
-        elif self.game_over:
-            for event in pygame.event.get():
-                if event.type == QUIT:
-                    self.done = True
-                elif event.type == USEREVENT:
-                    pygame.time.set_timer(pygame.USEREVENT, 300)
-                    over_text_1 = self.ui_variables.h2_b.render("GAME", 1, self.ui_variables.white)
-                    over_text_2 = self.ui_variables.h2_b.render("OVER", 1, self.ui_variables.white)
-                    over_start = self.ui_variables.h5.render("Press return to continue", 1, self.ui_variables.white)
-
-                    self.draw_board(self.next_mino, self.hold_mino, self.score, self.level, self.goal)
-                    self.screen.blit(over_text_1, (58, 75))
-                    self.screen.blit(over_text_2, (62, 105))
-
-                    self.name_1 = self.ui_variables.h2_i.render(chr(self.name[0]), 1, self.ui_variables.white)
-                    self.name_2 = self.ui_variables.h2_i.render(chr(self.name[1]), 1, self.ui_variables.white)
-                    self.name_3 = self.ui_variables.h2_i.render(chr(self.name[2]), 1, self.ui_variables.white)
-
-                    underbar_1 = self.ui_variables.h2.render("_", 1, self.ui_variables.white)
-                    underbar_2 = self.ui_variables.h2.render("_", 1, self.ui_variables.white)
-                    underbar_3 = self.ui_variables.h2.render("_", 1, self.ui_variables.white)
-
-                    self.screen.blit(self.name_1, (65, 147))
-                    self.screen.blit(self.name_2, (95, 147))
-                    self.screen.blit(self.name_3, (125, 147))
-
-                    if self.blink:
-                        self.screen.blit(over_start, (32, 195))
-                        self.blink = False
-                    else:
-                        if self.name_location == 0:
-                            self.screen.blit(underbar_1, (65, 145))
-                        elif self.name_location == 1:
-                            self.screen.blit(underbar_2, (95, 145))
-                        elif self.name_location == 2:
-                            self.screen.blit(underbar_3, (125, 145))
-                        self.blink = True
-
-                    pygame.display.update()
-                elif event.type == KEYDOWN:
+                pygame.display.update()
+            elif event.type == KEYDOWN:
                     if event.key == K_RETURN:
                         self.ui_variables.click_sound.play()
 
@@ -909,82 +803,211 @@ class Tetris():
                             self.leaders[i.split(' ')[0]] = int(i.split(' ')[1])
                         self.leaders = sorted(self.leaders.items(), key=operator.itemgetter(1), reverse=True)
 
-                        pygame.time.set_timer(pygame.USEREVENT, 1)
+                        self.wait(1)
                     elif event.key == K_RIGHT:
                         if self.name_location != 2:
                             self.name_location += 1
                         else:
                             self.name_location = 0
-                        pygame.time.set_timer(pygame.USEREVENT, 1)
+                        self.wait(1)
                     elif event.key == K_LEFT:
                         if self.name_location != 0:
                             self.name_location -= 1
                         else:
                             self.name_location = 2
-                        pygame.time.set_timer(pygame.USEREVENT, 1)
+                        self.wait(1)
                     elif event.key == K_UP:
                         self.ui_variables.click_sound.play()
                         if self.name[self.name_location] != 90:
                             self.name[self.name_location] += 1
                         else:
                             self.name[self.name_location] = 65
-                        pygame.time.set_timer(pygame.USEREVENT, 1)
+                        self.wait(1)
                     elif event.key == K_DOWN:
                         self.ui_variables.click_sound.play()
                         if self.name[self.name_location] != 65:
                             self.name[self.name_location] -= 1
                         else:
                             self.name[self.name_location] = 90
-                        pygame.time.set_timer(pygame.USEREVENT, 1)
+                        self.wait(1)
 
+    def view_start(self):
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                self.done = True
+            elif event.type == KEYDOWN:
+                if event.key == K_SPACE:
+                    self.ui_variables.click_sound.play()
+                    self.start = True
+
+        # self.wait(300)
+        self.screen.fill(self.ui_variables.white)
+        pygame.draw.rect(
+            self.screen,
+            self.ui_variables.grey_1,
+            Rect(0, 187, 300, 187)
+        )
+
+        title = self.ui_variables.h1.render("PYTRIS™", 1, self.ui_variables.grey_1)
+        title_start = self.ui_variables.h5.render("Press space to start", 1, self.ui_variables.white)
+        title_info = self.ui_variables.h6.render("Copyright (c) 2017 Jason Kim All Rights Reserved.", 1, self.ui_variables.white)
+
+        leader_1 = self.ui_variables.h5_i.render('1st ' + self.leaders[0][0] + ' ' + str(self.leaders[0][1]), 1, self.ui_variables.grey_1)
+        leader_2 = self.ui_variables.h5_i.render('2nd ' + self.leaders[1][0] + ' ' + str(self.leaders[1][1]), 1, self.ui_variables.grey_1)
+        leader_3 = self.ui_variables.h5_i.render('3rd ' + self.leaders[2][0] + ' ' + str(self.leaders[2][1]), 1, self.ui_variables.grey_1)
+
+        if self.blink:
+            self.screen.blit(title_start, (92, 195))
+            self.blink = False
+        else:
+            self.blink = True
+
+        self.screen.blit(title, (65, 120))
+        self.screen.blit(title_info, (40, 335))
+
+        self.screen.blit(leader_1, (10, 10))
+        self.screen.blit(leader_2, (10, 23))
+        self.screen.blit(leader_3, (10, 36))
+
+        if not self.start:
+            pygame.display.update()
+            self.clock.tick(3)
+
+    def view_game(self):
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                self.done = True
+            elif event.type == USEREVENT:
+                # Set speed
+                if not self.game_over:
+                    keys_pressed = pygame.key.get_pressed()
+                    if keys_pressed[K_DOWN]:
+                        self.speed_down()
+                    else:
+                        self.wait(self.framerate * 10)
+
+                # Draw a mino
+                self.draw_mino(self.dx, self.dy, self.mino, self.rotation)
+                self.draw_board(self.next_mino, self.hold_mino, self.score, self.level, self.goal)
+
+                # Erase a mino
+                if not self.game_over:
+                    self.erase_mino(self.dx, self.dy, self.mino, self.rotation)
+
+                # Move mino down
+                if not self.is_bottom(self.dx, self.dy, self.mino, self.rotation):
+                    self.dy += 1
+
+                # Create new mino
+                else:
+                    if self.hardrop or self.bottom_count == 6:
+                        self.hardrop = False
+                        self.bottom_count = 0
+                        self.score += 10 * self.level
+                        self.draw_mino(self.dx, self.dy,self.mino, self.rotation)
+                        self.draw_board(self.next_mino, self.hold_mino, self.score, self.level, self.goal)
+                        if self.is_stackable(self.next_mino):
+                            self.mino = self.next_mino
+                            self.next_mino = randint(1, 7)
+                            self.dx, self.dy = 3, 0
+                            self.rotation = 0
+                            self.hold = False
+                        else:
+                            self.start = False
+                            self.game_over = True
+                            self.wait(1)
+                    else:
+                        self.bottom_count += 1
+
+                # Erase line
+                erase_count = 0
+                for j in range(21):
+                    is_full = True
+                    for i in range(10):
+                        if self.matrix[i][j] == 0:
+                            is_full = False
+                    if is_full:
+                        erase_count += 1
+                        k = j
+                        while k > 0:
+                            for i in range(10):
+                                self.matrix[i][k] = self.matrix[i][k - 1]
+                            k -= 1
+                if erase_count == 1:
+                    self.ui_variables.single_sound.play()
+                    self.score += 50 * self.level
+                elif erase_count == 2:
+                    self.ui_variables.double_sound.play()
+                    self.score += 150 * self.level
+                elif erase_count == 3:
+                    self.ui_variables.triple_sound.play()
+                    self.score += 350 * self.level
+                elif erase_count == 4:
+                    self.ui_variables.tetris_sound.play()
+                    self.score += 1000 * self.level
+
+                # Increase self.level
+                self.goal -= erase_count
+                if self.goal < 1 and self.level < 15:
+                    self.level += 1
+                    self.goal += self.level * 5
+                    self.framerate = int(self.framerate * 0.8)
+
+            elif event.type == KEYDOWN:
+                self.erase_mino(self.dx, self.dy, self.mino, self.rotation)
+                if event.key == K_ESCAPE:
+                    self.ui_variables.click_sound.play()
+                    self.pause = True
+                # Hard drop
+                elif event.key == K_SPACE:
+                    self.teleport()
+                # Hold
+                elif event.key == K_LSHIFT or event.key == K_c:
+                    self.hold_press()
+                    
+                # Turn right
+                elif event.key == K_UP or event.key == K_x:
+                    self.turn_right()
+                # Turn left
+                elif event.key == K_z or event.key == K_LCTRL:
+                    self.turn_left()
+                # Move left
+                elif event.key == K_LEFT:
+                    self.move_left()
+                # Move right
+                elif event.key == K_RIGHT:
+                    self.move_right()
+
+        pygame.display.update()
+    
+    def view(self):
+        # Pause screen
+        if self.pause:
+            self.view_pause()
+            
+        # Game screen
+        elif self.start:
+            self.view_game()
+            
+
+        # Game over screen
+        elif self.game_over:
+            self.view_gameover()
+            
         # Start screen
         else:
-            for event in pygame.event.get():
-                if event.type == QUIT:
-                    self.done = True
-                elif event.type == KEYDOWN:
-                    if event.key == K_SPACE:
-                        self.ui_variables.click_sound.play()
-                        self.start = True
+            self.view_start()
+            
+    def wait(self, ms):
+        # Si c'est un bot, on fait tout de suite l'action (on met l'user event dans la queue)
+        if self.bot:
+            pygame.event.post(pygame.event.Event(pygame.USEREVENT))
+        else:
+            pygame.time.set_timer(pygame.USEREVENT, ms)
 
-            # pygame.time.set_timer(pygame.USEREVENT, 300)
-            self.screen.fill(self.ui_variables.white)
-            pygame.draw.rect(
-                self.screen,
-                self.ui_variables.grey_1,
-                Rect(0, 187, 300, 187)
-            )
-
-            title = self.ui_variables.h1.render("PYTRIS™", 1, self.ui_variables.grey_1)
-            title_start = self.ui_variables.h5.render("Press space to start", 1, self.ui_variables.white)
-            title_info = self.ui_variables.h6.render("Copyright (c) 2017 Jason Kim All Rights Reserved.", 1, self.ui_variables.white)
-
-            leader_1 = self.ui_variables.h5_i.render('1st ' + self.leaders[0][0] + ' ' + str(self.leaders[0][1]), 1, self.ui_variables.grey_1)
-            leader_2 = self.ui_variables.h5_i.render('2nd ' + self.leaders[1][0] + ' ' + str(self.leaders[1][1]), 1, self.ui_variables.grey_1)
-            leader_3 = self.ui_variables.h5_i.render('3rd ' + self.leaders[2][0] + ' ' + str(self.leaders[2][1]), 1, self.ui_variables.grey_1)
-
-            if self.blink:
-                self.screen.blit(title_start, (92, 195))
-                self.blink = False
-            else:
-                self.blink = True
-
-            self.screen.blit(title, (65, 120))
-            self.screen.blit(title_info, (40, 335))
-
-            self.screen.blit(leader_1, (10, 10))
-            self.screen.blit(leader_2, (10, 23))
-            self.screen.blit(leader_3, (10, 36))
-
-            if not self.start:
-                pygame.display.update()
-                self.clock.tick(3)
-
-
-   
 
 if __name__ == '__main__':
-    t = Tetris()
+    t = Tetris(bot=False)
     t.run()
 
 
